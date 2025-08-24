@@ -45,11 +45,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (body.action === 'markPaid') {
     const p = await prisma.payment.update({
       where: { id: body.id },
-      data: { status: (Prisma as any)?.PaymentStatus?.PAID ?? ((PayStatus as any).paid as any), paidAt: new Date() },
+      data: { status: (Prisma as any)?.PaymentStatus?.paid ?? ((PayStatus as any).paid as any), paidAt: new Date() },
     })
-    await logAudit(prisma, { action: 'payment.markPaid', entityType: 'payment', entityId: p.id, data: { caseId: params.id } });
-      await logAudit(prisma, { action: 'payment.create', entityType: 'payment', entityId: p.id, data: { caseId: params.id } });
-      return NextResponse.json({ ok: true, item: p })
+    await logAudit(prisma, { action: 'payment.markPaid', caseId: params.id, diff: { paymentId: p.id } });
+    return NextResponse.json({ ok: true, item: p })
   }
 
   if (body.action === 'create') {
@@ -59,10 +58,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         description: String(body.description ?? 'Invoice'),
         amountCents: Number(body.amountCents ?? 0),
         currency: String(body.currency ?? 'USD'),
-        status: (Prisma as any)?.PaymentStatus?.UNPAID ?? ((PayStatus as any).unpaid as any),
+        status: (Prisma as any)?.PaymentStatus?.UNpaid ?? ((PayStatus as any).unpaid as any),
         invoiceNumber: String(body.invoiceNumber ?? `INV-${Date.now()}`),
       },
     })
+    await logAudit(prisma, { action: 'payment.create', caseId: params.id, diff: { paymentId: p.id } });
     return NextResponse.json({ ok: true, item: p })
   }
 

@@ -6,11 +6,6 @@ import { assertCaseAccess } from '@/lib/rbac'
 
 export const dynamic = 'force-dynamic'
 
-// tiny no-throw audit helper
-async function logAudit(prisma: any, entry: any) {
-  try { await prisma.auditLog.create({ data: entry }); } catch {}
-}
-
 export const runtime = 'nodejs'
 export const revalidate = 0
 export const fetchCache = 'force-no-store'
@@ -44,8 +39,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const data: any = normalizeDocCreate(params.id, body)
 
     const doc = await prisma.document.create({ data })
-    await logAudit(prisma, { action: 'document.upload.complete', entityType: 'document', entityId: doc.id, data: { caseId: params.id, objectName: data.gcsObject } });
-  return NextResponse.json({ ok: true, item: doc })
+    await logAudit(prisma, { action: 'document.upload.complete', caseId: params.id, diff: { documentId: doc.id, objectName: data.gcsObject } });
+    return NextResponse.json({ ok: true, item: doc })
   } catch (err: any) {
     console.error('/documents/complete error:', err)
     return NextResponse.json(

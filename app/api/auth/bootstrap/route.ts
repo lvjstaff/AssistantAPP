@@ -7,14 +7,14 @@ export const fetchCache = 'force-no-store';
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthOptions } from "@/lib/auth";
 import { getUserTermsStatus } from "@/lib/terms";
 
 
 export async function POST(request: NextRequest) {
   const prisma = await getPrisma();
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(await getAuthOptions());
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

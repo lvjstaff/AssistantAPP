@@ -1,22 +1,13 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-enum VisaType {
-  work
-  spouse
-  student
-  tourist
-  extension
-  asylum
-  other
-}
-
+// ENUMS
 enum Role {
   CLIENT
   STAFF
@@ -24,102 +15,113 @@ enum Role {
 }
 
 enum CaseStatus {
-  new               @map("NEW")
-  in_review         @map("IN_REVIEW")
-  awaiting_client   @map("AWAITING_CLIENT")
-  documents_pending @map("DOCUMENTS_PENDING")
-  payment_due       @map("PAYMENT_DUE")
-  completed         @map("COMPLETED")
-  closed            @map("CLOSED")
+  new
+  documents_pending
+  in_review
+  submitted
+  approved
+  denied
 }
 
 enum DocState {
-  requested @map("REQUESTED")
-  uploaded  @map("UPLOADED")
-  approved  @map("APPROVED")
-  rejected  @map("REJECTED")
+  requested
+  uploaded
+  approved
+  rejected
 }
 
 enum PaymentStatus {
-  unpaid @map("UNPAID")
-  paid   @map("PAID")
-  void   @map("VOID")
+  unpaid
+  paid
+  void
 }
 
+enum VisaType {
+  TOURIST
+  WORK
+  STUDENT
+}
+
+// MODELS
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  image     String?
-  phone     String?
-  role      Role      @default(CLIENT)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  image             String?
+  phone             String?
+  preferredLanguage String?   @default("EN")
+  role              Role      @default(CLIENT)
 
-  cases     Case[]    @relation("CaseClient")
-  assigned  Case[]    @relation("CaseAssignee")
+  casesAsClient     Case[]     @relation("CaseClient")
+  casesAsManager    Case[]     @relation("CaseManager")
+  casesAsLawyer     Case[]     @relation("Lawyer")
+  
+  assignedTasks     Task[]     @relation("AssignedTasks")
+  createdTasks      Task[]     @relation("CreatedTasks")
+  messages          Message[]  @relation("UserMessages")
+  documents         Document[] @relation("Uploader")
+  reviews           Document[] @relation("Reviewer")
+  auditLogs         AuditLog[]
+  terms             TermsAcceptance[]
 
-  messages  Message[] @relation("UserMessages")
-  documents Document[] @relation("Uploader")
-  reviews   Document[] @relation("Reviewer")
-  auditLogs AuditLog[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  accounts  Account[]
-  sessions  Session[]
-  terms     TermsAcceptance[]
+  accounts Account[]
+  sessions Session[]
 }
 
 model Case {
-  id             String         @id @default(cuid())
-  title          String
-  applicantName  String
-  applicantEmail String
-  status         CaseStatus     @default(new)
-  stage          String         @default("Intake")
-  visaType       VisaType?
-  originCountry  String?
+  id                     String      @id @default(cuid())
+  caseNumber             String      @unique
+  title                  String
+  applicantName          String
+  applicantEmail         String
+  status                 CaseStatus  @default(new)
+  stage                  String      @default("Intake")
+  visaType               VisaType?
+  originCountry          String?
+  destinationCountry     String?
+  urgencyLevel           String
+  overallStatus          String
+  completionPercentage   Int
+  totalFee               Float
+  currency               String
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 
-  client         User?          @relation("CaseClient", fields: [clientId], references: [id])
-  clientId       String?
+  client                 User?       @relation("CaseClient", fields: [clientId], references: [id])
+  clientId               String?
+  caseManager            User?       @relation("CaseManager", fields: [caseManagerId], references: [id])
+  caseManagerId          String?
+  lawyer                 User?       @relation("Lawyer", fields: [lawyerId], references: [id])
+  lawyerId               String?
 
-  assignee       User?          @relation("CaseAssignee", fields: [assigneeId], references: [id])
-  assigneeId     String?
-
-  documents      Document[]
-  requests       DocumentRequest[]
-  messages       Message[]
-  payments       Payment[]
-  auditLogs      AuditLog[]
-
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  documents              Document[]
+  requests               DocumentRequest[]
+  messages               Message[]
+  payments               Payment[]
+  auditLogs              AuditLog[]
+  journeyStages          JourneyStage[]
+  tasks                  Task[]
 }
 
 model Document {
-  id              String    @id @default(cuid())
-  case            Case      @relation(fields: [caseId], references: [id])
-  caseId          String
-  name            String
-  state           DocState  @default(requested)
-  sizeBytes       Int?
-  mimeType        String?
-  gcsBucket       String?
-  gcsObject       String?
-  url             String?
-
-  uploadedBy      User?     @relation("Uploader", fields: [uploadedById], references: [id])
-  uploadedById    String?
-
-  reviewedBy      User?     @relation("Reviewer", fields: [reviewedById], references: [id])
-  reviewedById    String?
-  reviewedAt      DateTime?
-  rejectionReason String?
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  case         Case     @relation(fields: [caseId], references: [id])
+  caseId       String
+  name         String
+  state        DocState @default(requested)
+  sizeBytes    Int?
+  mimeType     String?
+  gcsBucket    String?
+  gcsObject    String?
+  url          String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploadedBy   User?    @relation("Uploader", fields: [uploadedById], references: [id])
+  uploadedById String?
+  reviewedBy   User?    @relation("Reviewer", fields: [reviewedById], references: [id])
+  reviewedById String?
+  reviewedAt   DateTime?
 }
-
 model DocumentRequest {
   id          String   @id @default(cuid())
   case        Case     @relation(fields: [caseId], references: [id])
@@ -131,34 +133,74 @@ model DocumentRequest {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
+model DocumentType {
+  id            String  @id @default(cuid())
+  visaType      String
+  documentKey   String
+  nameEn        String
+  nameAr        String
+  namePt        String
+  descriptionEn String?
+  isRequired    Boolean @default(true)
+  category      String
+  displayOrder  Int
+  @@unique([visaType, documentKey])
+}
+model JourneyStage {
+  id         String @id @default(cuid())
+  case       Case   @relation(fields: [caseId], references: [id])
+  caseId     String
+  stageKey   String
+  title      String
+  stageOrder Int
+  status     String
+  ownerRole  Role
+  @@unique([caseId, stageKey])
+}
+model Task {
+  id          String    @id @default(cuid())
+  case        Case      @relation(fields: [caseId], references: [id])
+  caseId      String
+  title       String
+  description String?
+  taskType    String
+  status      String
+  priority    String
+  dueDate     DateTime?
+  assignedUser  User      @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  assignedTo    String
+  createdByUser User      @relation("CreatedTasks", fields: [createdBy], references: [id])
+  createdBy     String
+}
 model Message {
   id                   String   @id @default(cuid())
   case                 Case     @relation(fields: [caseId], references: [id])
   caseId               String
-  sender               String   // 'client' | 'staff'
+  sender               String
   body                 String
   attachmentDocumentId String?
   senderUser           User?    @relation("UserMessages", fields: [senderUserId], references: [id])
   senderUserId         String?
   createdAt            DateTime @default(now())
 }
-
 model Payment {
-  id              String         @id @default(cuid())
-  case            Case           @relation(fields: [caseId], references: [id])
+  id              String        @id @default(cuid())
+  case            Case          @relation(fields: [caseId], references: [id])
   caseId          String
+  title           String?
   description     String
-  amountCents     Int
-  currency        String         @default("USD")
-  status          PaymentStatus  @default(unpaid)
-  invoiceNumber   String         @unique
+  amount          Float
+  amountCents     Int?
+  currency        String        @default("USD")
+  status          PaymentStatus @default(unpaid)
+  invoiceNumber   String?       @unique
   stripeSessionId String?
   stripePiId      String?
-  issuedAt        DateTime       @default(now())
+  paymentMethod   String?
+  issuedAt        DateTime      @default(now())
   paidAt          DateTime?
+  dueDate         DateTime?
 }
-
 model TermsAcceptance {
   id         String   @id @default(cuid())
   user       User     @relation(fields: [userId], references: [id])
@@ -167,7 +209,6 @@ model TermsAcceptance {
   ip         String?
   acceptedAt DateTime @default(now())
 }
-
 model AuditLog {
   id        String   @id @default(cuid())
   case      Case?    @relation(fields: [caseId], references: [id])
@@ -178,8 +219,6 @@ model AuditLog {
   diff      Json?
   createdAt DateTime @default(now())
 }
-
-/*** NextAuth ***/
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -193,25 +232,19 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([provider, providerAccountId])
 }
-
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
-
   @@unique([identifier, token])
 }

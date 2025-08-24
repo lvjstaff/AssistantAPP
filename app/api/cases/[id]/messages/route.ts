@@ -21,7 +21,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       orderBy: { createdAt: 'asc' },
       select: { id: true, sender: true, body: true, createdAt: true },
     })
-    const items = rows.map(r => ({
+    const items = rows.map((r: any) => ({
       id: r.id,
       from: (r.sender === 'staff' ? 'staff' : 'client') as 'client'|'staff',
       text: r.body,
@@ -42,7 +42,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     // Mock mode: append to mock store
     if (isDevNoDB) {
-      const item = addMessageMock(params.id, { from: 'client', text })
+      const item = addMessageMock(params.id, 'client', text)
       return NextResponse.json({ ok: true, item })
     }
 

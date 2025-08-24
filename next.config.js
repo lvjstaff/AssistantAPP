@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // output: 'standalone',
   reactStrictMode: true,
   // ESLint is not installed in this build; don't block builds if someone adds it back
   eslint: { ignoreDuringBuilds: true },

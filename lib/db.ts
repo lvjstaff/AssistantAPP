@@ -17,3 +17,6 @@ export async function getPrisma(): Promise<any> {
     return new Proxy({}, { get(){ throw explain }, apply(){ throw explain } })
   }
 }
+
+// Export the prisma instance for synchronous access
+export { prisma };

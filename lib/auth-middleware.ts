@@ -1,8 +1,7 @@
-export type UserRole = 'client' | 'lvj_admin' | 'lvj_team' | 'lvj_marketing' | 'lawyer_admin' | 'lawyer_associate' | 'lawyer_assistant';
-
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { canAccessRoute } from "./rbac";
+import { canAccessRoute, UserRole } from "./rbac";
+
 export async function authMiddleware(request: NextRequest) {
   const token = await getToken({ 
     req: request, 

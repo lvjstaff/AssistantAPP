@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-8080}",
+    "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate || true",
     "serve": "node .next/standalone/server.js",
@@ -80,6 +80,7 @@
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
     "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.1",
     "postcss": "^8.5.6",
     "prisma": "6.7.0",
     "tailwindcss": "^4.1.11",

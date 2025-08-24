@@ -1,46 +1,26 @@
-import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
-
-type UserRole = 'client' | 'lvj_admin' | 'lvj_team' | 'lvj_marketing' | 'lawyer_admin' | 'lawyer_associate' | 'lawyer_assistant';
-type Language = 'en' | 'ar' | 'pt';
-type RenderMode = string;
+import { Role } from "@prisma/client";
+import NextAuth, { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
+  /**
+   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
   interface Session {
-    user: DefaultSession["user"] & {
-      id?: string;
-      role?: UserRole | string | null;
-      preferredLanguage?: Language | string | null;
-      renderMode?: RenderMode | string | null;
-      termsAccepted?: boolean;
-          firstName?: string | null;
-      lastName?: string | null;
-      termsVersion?: string | number | null;
-    };
-
+    user: {
+      id: string;
+      role: Role;
+    } & DefaultSession["user"];
   }
 
-  interface User extends DefaultUser {
-    id?: string;
-    role?: UserRole | string | null;
-    preferredLanguage?: Language | string | null;
-    renderMode?: RenderMode | string | null;
-    termsAccepted?: boolean;
-    firstName?: string | null;
-  lastName?: string | null;
-  termsVersion?: string | number | null;
-}
-
+  interface User {
+    role: Role;
+  }
 }
 
 declare module "next-auth/jwt" {
+  /** Returned by the `jwt` callback and sent to the `session` callback. */
   interface JWT {
-    role?: UserRole | string | null;
-    preferredLanguage?: Language | string | null;
-    renderMode?: RenderMode | string | null;
-    termsAccepted?: boolean;
-    firstName?: string | null;
-  lastName?: string | null;
-  termsVersion?: string | number | null;
-}
-
+    id: string;
+    role: Role;
+  }
 }

@@ -1,60 +1,45 @@
-import 'server-only'
-import type { NextAuthOptions, User } from 'next-auth'
-import Credentials from 'next-auth/providers/credentials'
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { AuthOptions } from "next-auth";
+import { Role } from "@prisma/client";
 
-export async function getAuthOptions(): Promise<NextAuthOptions> {
-  const providers: any[] = []
+// The fix is to use a NAMED import for the prisma client instance
+import { prisma } from "@/lib/db";
 
-  // Dev-only Credentials login (works w/ or w/o DB)
-  if (process.env.NODE_ENV !== 'production') {
-    providers.push(
-      Credentials({
-        name: 'Dev Login',
-        credentials: {
-          email: { label: 'Email', type: 'email', placeholder: 'you@example.com' },
-          code:  { label: 'Access Code', type: 'password', placeholder: process.env.DEV_LOGIN_CODE ?? 'lvjdev' },
-        },
-        async authorize(creds) {
-          const email = (creds?.email ?? '').toString().trim().toLowerCase()
-          const code  = (creds?.code ?? '').toString().trim()
-          const expected = process.env.DEV_LOGIN_CODE ?? 'lvjdev'
-          if (!email || code !== expected) return null
-          const user: User = { id: email, email, name: email.split('@')[0] }
-          return user
-        }
-      })
-    )
-  }
+// Make sure to import your providers, e.g.,
+// import CredentialsProvider from "next-auth/providers/credentials";
 
-  // Optional: turn on PrismaAdapter when DB is on & flag is set
-  const useAdapter = process.env.ENABLE_PRISMA_ADAPTER === '1' && process.env.SKIP_DB !== '1'
-  const adapter = useAdapter
-    ? (await import('@next-auth/prisma-adapter')).PrismaAdapter((await import('@/lib/db')).getPrisma())
-    : undefined
+export const getAuthOptions = (): AuthOptions => ({
+  // The PrismaAdapter now receives the direct client instance
+  adapter: PrismaAdapter(prisma),
+  
+  // ==> IMPORTANT: Add your existing authentication providers here <==
+  providers: [
+    /*
+     * Example:
+     * CredentialsProvider({ ...your provider config... })
+    */
+  ],
 
-  const opts: NextAuthOptions = {
-    adapter: adapter as any,        // only truthy if flag on
-    session: { strategy: 'jwt' },   // keep JWT sessions
-    providers,
-    pages: { signIn: '/signin' },
-    callbacks: {
-      async jwt({ token, user }) {
-        if (user) {
-          token.email = user.email
-          token.name  = user.name
-          token.sub   = user.id as string
-        }
-        return token
-      },
-      async session({ session, token }) {
-        if (session?.user) {
-          session.user.email = (token.email as string) ?? session.user.email
-          session.user.name  = (token.name as string) ?? session.user.name
-          ;(session.user as any).id = token.sub
-        }
-        return session
-      },
+  session: {
+    strategy: "jwt",
+  },
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+      }
+      return token;
     },
-  }
-  return opts
-}
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as Role;
+      }
+      return session;
+    },
+  },
+  
+  // ==> Add any other existing options like 'pages' or 'secret' here <==
+});

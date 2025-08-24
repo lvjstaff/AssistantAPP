@@ -2,27 +2,20 @@ import { NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-export const revalidate = 0
-export const fetchCache = 'force-no-store'
 
 export async function GET(req: Request) {
   const prisma = await getPrisma()
-  const url = new URL(req.url)
-  const limit = Number(url.searchParams.get('limit') ?? 50)
-  const caseId = url.searchParams.get('caseId')
+  const { searchParams } = new URL(req.url)
+  const caseId = searchParams.get('caseId') ?? undefined
+  const limit = Number(searchParams.get('limit') ?? 20)
 
-  let items = await (prisma as any).auditLog?.findMany?.({
+  const where: any = {}
+  if (caseId) where.caseId = caseId
+
+  const items = await prisma.auditLog.findMany({
+    where,
     orderBy: { at: 'desc' },
-    take: Math.min(Math.max(limit, 1), 200),
-  }) ?? []
-
-  if (caseId) {
-    items = items.filter((row: any) => {
-      const d = row?.data ?? {}
-      return d?.caseId === caseId || d?.case_id === caseId || row?.entityId === caseId
-    })
-  }
-
+    take: Math.min(Math.max(limit, 1), 100),
+  })
   return NextResponse.json({ items })
 }

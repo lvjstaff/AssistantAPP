@@ -8,7 +8,7 @@ const AllowedUserRoles: UserRole[] = [
   'client','lvj_admin','lvj_team','lvj_marketing','lawyer_admin','lawyer_associate','lawyer_assistant'
 ];
 export type Language = 'en' | 'ar' | 'pt';
-export type UserRole = "client" | "lvj_admin" | "lvj_team" | "lvj_marketing" | "lawyer_admin" | "lawyer_associate" | "lawyer_assistant";
+import { UserRole } from "@/lib/rbac";
 
 import { NextRequest, NextResponse } from "next/server";
 import bcryptjs from "bcryptjs";
