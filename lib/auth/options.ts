@@ -1,14 +1,9 @@
 import { Role } from "@prisma/client";
 import type { NextAuthOptions } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { ENV, isProd } from '@/lib/env'
-
-if (isProd && !ENV.NEXTAUTH_SECRET) {
-  console.warn('[auth] NEXTAUTH_SECRET is missing in production. Set it on Cloud Run to enable secure sessions.')
-}
+import { prisma } from "@/lib/db";
 
 export const authOptions: NextAuthOptions = {
-  secret: ENV.NEXTAUTH_SECRET || undefined,
   providers: [
     Credentials({
       name: 'Credentials',
@@ -17,13 +12,38 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const email = credentials?.email?.toLowerCase().trim()
-        const pass = credentials?.password
-        if (!email || !pass) return null
-        if (!isProd && email === 'demo@lvj.local' && pass === 'demo') {
-          return { id: 'demo', name: 'Demo User', email, role: Role.ADMIN }
+        console.log("\n--- AUTHORIZE ATTEMPT ---");
+        console.log("Attempting login for email:", credentials?.email);
+
+        if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Email or password missing in credentials object.");
+          return null;
         }
-        return null
+        
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
+
+          if (user) {
+            console.log("✅ User found in database:", user.email, "Role:", user.role);
+            if (user.password === credentials.password) {
+              console.log("✅ Password MATCHES. Login successful.");
+              return user;
+            } else {
+              console.log("❌ Password DOES NOT MATCH.");
+              console.log("   - DB password:", user.password);
+              console.log("   - Provided password:", credentials.password);
+              return null;
+            }
+          } else {
+            console.log("❌ User NOT found in database.");
+            return null;
+          }
+        } catch (error) {
+          console.error("🔥 DATABASE ERROR during authorization:", error);
+          return null;
+        }
       },
     }),
   ],
@@ -32,7 +52,6 @@ export const authOptions: NextAuthOptions = {
     signIn: '/signin',
   },
   callbacks: {
-    // This is the CORRECT, type-safe callback logic
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

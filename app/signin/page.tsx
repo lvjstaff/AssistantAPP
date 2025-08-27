@@ -13,7 +13,7 @@ export default function SignInPage() {
   async function signInDev(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setErr(null); setMsg(null)
-    await signIn('credentials', { email, code, redirect: true, callbackUrl: '/cases' })
+    await signIn('credentials', { email, password: code, redirect: true, callbackUrl: '/cases' })
   }
 
   async function sendMagicLink() {
@@ -40,7 +40,7 @@ export default function SignInPage() {
         <form onSubmit={signInDev} className="space-y-3">
           <div className="space-y-1">
             <label className="text-sm">Access code (dev)</label>
-            <input className="w-full border rounded px-3 py-2" type="password" value={code} onChange={e=>setCode(e.target.value)} placeholder="lvjdev" />
+            <input className="w-full border rounded px-3 py-2" type="password" name="password" value={code} onChange={e=>setCode(e.target.value)} placeholder="lvjdev" />
             <p className="text-xs text-muted-foreground">Use DEV_LOGIN_CODE from .env (default: <code>lvjdev</code>).</p>
           </div>
           <button type="submit" disabled={loading} className="w-full px-3 py-2 border rounded bg-black text-white disabled:opacity-60">
